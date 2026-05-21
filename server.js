@@ -1,71 +1,230 @@
 import 'dotenv/config';
-import axios from 'axios';
-import QRCode from 'qrcode';
-import { Client } from 'whatsapp-web.js';
+import pkg from 'whatsapp-web.js';
 
-console.log("🚀 Iniciando bot...");
+process.stdout.setEncoding('utf8');
 
-const client = new Client();
+const { Client, LocalAuth } = pkg;
 
-// 📲 QR Code (imagem)
-client.on('qr', async (qr) => {
-    console.log("📲 QR gerado! Salvando imagem...");
+console.log('🚀 Iniciando bot...');
 
-    try {
-        await QRCode.toFile('qr.png', qr);
-        console.log("📸 Abra o arquivo qr.png e escaneie no WhatsApp");
-    } catch (err) {
-        console.log("Erro ao gerar QR:", err.message);
+const client = new Client({
+
+    authStrategy: new LocalAuth(),
+
+    webVersionCache: {
+        type: 'none'
+    },
+
+    puppeteer: {
+
+        headless: false,
+
+        executablePath:
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-extensions'
+        ]
     }
 });
 
-// 🤖 Bot pronto
+// ===============================
+// QR CODE
+// ===============================
+
+client.on('qr', () => {
+
+    console.log('\n📱 Escaneie o QR Code\n');
+
+});
+
+// ===============================
+// BOT CONECTADO
+// ===============================
+
 client.on('ready', () => {
-    console.log("🤖 Bot conectado com sucesso!");
+
+    console.log('\n✅ BOT CONECTADO!\n');
+
 });
 
-// ⏳ Loading status
-client.on('loading_screen', (percent, message) => {
-    console.log(`⏳ Carregando ${percent}% - ${message}`);
+// ===============================
+// ERRO LOGIN
+// ===============================
+
+client.on('auth_failure', (msg) => {
+
+    console.log('\n❌ Falha autenticação:\n');
+
+    console.log(msg);
+
 });
 
-// 🧠 GEMINI (CORRIGIDO)
-async function askGemini(text) {
-    try {
-        const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
-            {
-                contents: [
-                    {
-                        parts: [{ text }]
-                    }
-                ]
-            }
-        );
+// ===============================
+// DESCONECTADO
+// ===============================
 
-        return response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta";
-    } catch (err) {
-        console.log("Erro Gemini:", err.response?.data || err.message);
-        return "Erro na IA 😅";
-    }
-}
+client.on('disconnected', (reason) => {
 
-// 📩 Mensagens recebidas
+    console.log('\n⚠️ Bot desconectado:\n');
+
+    console.log(reason);
+
+});
+
+// ===============================
+// RECEBER MENSAGENS
+// ===============================
+
 client.on('message', async (msg) => {
-    if (!msg.body) return;
 
-    // evita grupos (opcional)
-    if (msg.from.includes('@g.us')) return;
-
-    console.log("📩 Mensagem:", msg.body);
+    console.log('🔥 Mensagem recebida');
 
     try {
-        const reply = await askGemini(msg.body);
-        await msg.reply(reply);
-    } catch (err) {
-        console.log("Erro ao responder:", err.message);
+
+        // ignora grupos
+        if (msg.from.includes('@g.us')) return;
+
+        // ignora status
+        if (msg.from === 'status@broadcast') return;
+
+        // ignora mensagens do próprio bot
+        if (msg.fromMe) return;
+
+        // ignora mensagens vazias
+        if (!msg.body) return;
+
+        // texto tratado
+        const texto = msg.body.toLowerCase().trim();
+
+        // log terminal
+        console.log('\n========================');
+        console.log('📩 NOVA MENSAGEM');
+        console.log('👤 De:', msg.from);
+        console.log('💬 Texto:', msg.body);
+        console.log('========================\n');
+
+        // MENU
+        if (texto === 'menu') {
+
+            await client.sendMessage(
+
+                msg.from,
+
+`🤖 *ATENDIMENTO AUTOMÁTICO*
+
+Olá! Seja bem-vindo 👋
+
+Escolha uma opção:
+
+1️⃣ Suporte
+2️⃣ Financeiro
+3️⃣ Vendas
+
+Digite apenas o número da opção.`
+
+            );
+
+            console.log('✅ Menu enviado');
+
+        }
+
+        // SUPORTE
+        else if (texto === '1') {
+
+            await client.sendMessage(
+
+                msg.from,
+
+`🛠️ *SUPORTE*
+
+Descreva seu problema.
+
+Nossa equipe responderá em breve.`
+
+            );
+
+            console.log('✅ Suporte enviado');
+
+        }
+
+        // FINANCEIRO
+        else if (texto === '2') {
+
+            await client.sendMessage(
+
+                msg.from,
+
+`💰 *FINANCEIRO*
+
+Envie sua dúvida financeira.
+
+Exemplo:
+• boleto
+• pagamento
+• fatura`
+
+            );
+
+            console.log('✅ Financeiro enviado');
+
+        }
+
+        // VENDAS
+        else if (texto === '3') {
+
+            await client.sendMessage(
+
+                msg.from,
+
+`🛒 *VENDAS*
+
+Nosso setor comercial irá te atender.
+
+Envie sua dúvida ou interesse.`
+
+            );
+
+            console.log('✅ Vendas enviado');
+
+        }
+
+        // COMANDO INVALIDO
+        else {
+
+            await client.sendMessage(
+
+                msg.from,
+
+`❌ Comando inválido.
+
+Digite:
+menu`
+
+            );
+
+            console.log('⚠️ Comando inválido');
+
+        }
+
+    } catch (error) {
+
+        console.log('\n❌ ERRO:\n');
+
+        console.log(error);
+
     }
+
 });
 
-// 🚀 inicia bot
+// ===============================
+// INICIAR BOT
+// ===============================
+
+console.log('⏳ Inicializando WhatsApp...');
+
 client.initialize();
