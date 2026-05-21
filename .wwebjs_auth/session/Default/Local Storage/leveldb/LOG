@@ -1,3 +1,6 @@
-2026/05/21-16:55:26.918 3538 Reusing MANIFEST C:\Users\guilh\Desktop\whatsweb\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
-2026/05/21-16:55:26.930 3538 Recovering log #3
-2026/05/21-16:55:26.934 3538 Reusing old log C:\Users\guilh\Desktop\whatsweb\.wwebjs_auth\session\Default\Local Storage\leveldb/000003.log 
+2026/05/21-18:20:39.469 3520 Reusing MANIFEST C:\Users\guilh\Desktop\whatsweb\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
+2026/05/21-18:20:39.479 3520 Recovering log #4
+2026/05/21-18:20:39.485 3520 Reusing old log C:\Users\guilh\Desktop\whatsweb\.wwebjs_auth\session\Default\Local Storage\leveldb/000004.log 
+2026/05/21-18:23:39.895 3654 Level-0 table #8: started
+2026/05/21-18:23:39.938 3654 Level-0 table #8: 14472 bytes OK
+2026/05/21-18:23:40.005 3654 Delete type=0 #4
