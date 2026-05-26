@@ -2,7 +2,7 @@ import 'dotenv/config';
 import fs from 'fs';
 import pkg from 'whatsapp-web.js';
 
-process.stdout.setEncoding('utf8');
+process.stdout.write('\x1b[?25h');
 
 const { Client, LocalAuth } = pkg;
 
@@ -12,13 +12,33 @@ const { Client, LocalAuth } = pkg;
 
 const caminhoClientes = './database/clientes.json';
 const caminhoSessoes = './database/sessoes.json';
+const caminhoChamados = './database/chamados.json';
 
 // ======================================
 // GARANTIR PASTA
 // ======================================
 
 if (!fs.existsSync('./database')) {
-    fs.mkdirSync('./database', { recursive: true });
+
+    fs.mkdirSync('./database', {
+        recursive: true
+    });
+}
+
+// ======================================
+// GARANTIR ARQUIVOS
+// ======================================
+
+if (!fs.existsSync(caminhoClientes)) {
+    fs.writeFileSync(caminhoClientes, '[]');
+}
+
+if (!fs.existsSync(caminhoSessoes)) {
+    fs.writeFileSync(caminhoSessoes, '{}');
+}
+
+if (!fs.existsSync(caminhoChamados)) {
+    fs.writeFileSync(caminhoChamados, '[]');
 }
 
 // ======================================
@@ -26,30 +46,44 @@ if (!fs.existsSync('./database')) {
 // ======================================
 
 function lerJSON(caminho, fallback) {
-    try {
-        if (!fs.existsSync(caminho)) {
-            fs.writeFileSync(caminho, JSON.stringify(fallback, null, 2));
-            return fallback;
-        }
 
-        const dados = fs.readFileSync(caminho, 'utf-8');
+    try {
+
+        const dados = fs.readFileSync(
+            caminho,
+            'utf-8'
+        );
 
         if (!dados || !dados.trim()) {
-            fs.writeFileSync(caminho, JSON.stringify(fallback, null, 2));
+
+            salvarJSON(caminho, fallback);
+
             return fallback;
         }
 
         return JSON.parse(dados);
 
     } catch (err) {
-        console.log(`⚠️ JSON corrompido → resetando: ${caminho}`);
-        fs.writeFileSync(caminho, JSON.stringify(fallback, null, 2));
+
+        console.log(
+            `⚠️ JSON corrompido → resetando: ${caminho}`
+        );
+
+        salvarJSON(caminho, fallback);
+
         return fallback;
     }
 }
 
 function salvarJSON(caminho, data) {
-    fs.writeFileSync(caminho, JSON.stringify(data, null, 2), 'utf-8');
+
+    fs.writeFileSync(
+        caminho,
+        JSON.stringify(data, null, 2),
+        'utf-8'
+    );
+
+    console.log(`💾 JSON salvo: ${caminho}`);
 }
 
 // ======================================
@@ -57,60 +91,153 @@ function salvarJSON(caminho, data) {
 // ======================================
 
 function salvarCliente(numero) {
-    const clientes = lerJSON(caminhoClientes, []);
+
+    const clientes = lerJSON(
+        caminhoClientes,
+        []
+    );
 
     if (!clientes.includes(numero)) {
-        clientes.push(numero);
-        salvarJSON(caminhoClientes, clientes);
 
-        console.log(`💾 Cliente salvo: ${numero}`);
+        clientes.push(numero);
+
+        salvarJSON(
+            caminhoClientes,
+            clientes
+        );
+
+        console.log(
+            `💾 Cliente salvo: ${numero}`
+        );
     }
 }
 
 // ======================================
-// SESSÕES (COM DEBUG FORTE)
+// SESSÕES
 // ======================================
 
 function lerSessoes() {
-    return lerJSON(caminhoSessoes, {});
+
+    return lerJSON(
+        caminhoSessoes,
+        {}
+    );
 }
 
 function salvarSessao(numero, etapa) {
+
     const sessoes = lerSessoes();
 
-    sessoes[numero] = {
-        etapa,
-        atualizadoEm: new Date().toISOString()
-    };
+    if (etapa === null) {
 
-    salvarJSON(caminhoSessoes, sessoes);
+        delete sessoes[numero];
 
-    // 🔥 DEBUG FORTE (agora você vê o que realmente salvou)
-    console.log(`💾 SESSÃO SALVA → ${numero} = ${etapa}`);
+    } else {
+
+        sessoes[numero] = {
+            etapa,
+            atualizadoEm:
+                new Date().toISOString()
+        };
+    }
+
+    salvarJSON(
+        caminhoSessoes,
+        sessoes
+    );
+
+    console.log(
+        `💾 SESSÃO → ${numero} = ${etapa}`
+    );
 }
 
 function obterSessao(numero) {
+
     const sessoes = lerSessoes();
+
     return sessoes[numero]?.etapa || null;
 }
+
+// ======================================
+// PROTOCOLO
+// ======================================
+
+function gerarProtocolo() {
+
+    const numero = Math.floor(
+        1000 + Math.random() * 9000
+    );
+
+    return `SUP-${numero}`;
+}
+
+// ======================================
+// CHAMADOS
+// ======================================
+
+function salvarChamado(
+    numero,
+    mensagem,
+    protocolo
+) {
+
+    const chamados = lerJSON(
+        caminhoChamados,
+        []
+    );
+
+    chamados.push({
+        numero,
+        protocolo,
+        mensagem,
+        status: 'aberto',
+        data: new Date().toISOString()
+    });
+
+    salvarJSON(
+        caminhoChamados,
+        chamados
+    );
+
+    console.log(
+        `📁 Chamado salvo: ${protocolo}`
+    );
+}
+
+// ======================================
+// DELAY
+// ======================================
+
+const delay = ms =>
+    new Promise(resolve =>
+        setTimeout(resolve, ms)
+    );
 
 // ======================================
 // BOT START
 // ======================================
 
 console.log('🚀 Iniciando bot...');
-console.log('⏳ Inicializando WhatsApp...');
+console.log(
+    '⏳ Inicializando WhatsApp...'
+);
 
 // ======================================
 // CLIENT
 // ======================================
 
 const client = new Client({
+
     authStrategy: new LocalAuth(),
-    webVersionCache: { type: 'none' },
+
+    webVersionCache: {
+        type: 'none'
+    },
 
     puppeteer: {
+
         headless: false,
+
         executablePath:
             'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
 
@@ -129,11 +256,17 @@ const client = new Client({
 // ======================================
 
 client.on('qr', () => {
-    console.log('📱 Escaneie o QR Code');
+
+    console.log(
+        '📱 Escaneie o QR Code'
+    );
 });
 
 client.on('ready', () => {
-    console.log('✅ BOT CONECTADO!');
+
+    console.log(
+        '✅ BOT CONECTADO!'
+    );
 });
 
 // ======================================
@@ -141,48 +274,126 @@ client.on('ready', () => {
 // ======================================
 
 client.on('message', async (msg) => {
+
     try {
 
-        if (msg.from.includes('@g.us')) return;
-        if (msg.from === 'status@broadcast') return;
+        // ======================================
+        // FILTROS
+        // ======================================
+
+        if (
+            msg.from.includes('@g.us')
+        ) return;
+
+        if (
+            msg.from ===
+            'status@broadcast'
+        ) return;
+
         if (msg.fromMe) return;
+
         if (!msg.body) return;
 
-        const texto = msg.body.toLowerCase().trim();
+        // ======================================
+        // DADOS
+        // ======================================
+
+        const texto =
+            msg.body
+                .toLowerCase()
+                .trim();
 
         salvarCliente(msg.from);
 
-        const sessaoAtual = obterSessao(msg.from);
+        const sessaoAtual =
+            obterSessao(msg.from);
 
-        console.log('\n========================');
-        console.log('📩 NOVA MENSAGEM');
-        console.log('👤 De:', msg.from);
-        console.log('💬 Texto:', msg.body);
-        console.log('🧠 Sessão:', sessaoAtual);
-        console.log('========================\n');
+        // ======================================
+        // SAIR
+        // ======================================
+
+        if (texto === 'sair') {
+
+            salvarSessao(
+                msg.from,
+                null
+            );
+
+            await client.sendMessage(
+                msg.from,
+                '✅ Atendimento encerrado.'
+            );
+
+            return;
+        }
+
+        // ======================================
+        // LOG
+        // ======================================
+
+        console.log(
+            '\n========================'
+        );
+
+        console.log(
+            '📩 NOVA MENSAGEM'
+        );
+
+        console.log(
+            '👤 De:',
+            msg.from
+        );
+
+        console.log(
+            '💬 Texto:',
+            msg.body
+        );
+
+        console.log(
+            '🧠 Sessão:',
+            sessaoAtual
+        );
+
+        console.log(
+            '========================\n'
+        );
 
         // ======================================
         // INTELIGÊNCIA NATURAL
         // ======================================
 
-        if (texto.includes('internet') || texto.includes('caiu')) {
+        if (
+    (
+        texto.includes('internet') ||
+        texto.includes('caiu')
+    ) &&
+    sessaoAtual !== 'suporte'
+) {
 
-            await client.sendMessage(
-                msg.from,
-                `🛠️ Detectei problema de conexão.
+    await delay(1000);
+
+    await client.sendMessage(
+        msg.from,
+`🛠️ Detectei problema de conexão.
 
 Abrindo chamado no suporte...`
-            );
+    );
 
-            salvarSessao(msg.from, 'suporte');
-            return;
-        }
+    salvarSessao(
+        msg.from,
+        'suporte'
+    );
+
+    return;
+}
 
         // ======================================
         // MENU
         // ======================================
 
         if (texto === 'menu') {
+
+            await delay(1000);
 
             await client.sendMessage(
                 msg.from,
@@ -195,38 +406,89 @@ Abrindo chamado no suporte...`
 Digite o número da opção.`
             );
 
-            salvarSessao(msg.from, 'menu');
+            salvarSessao(
+                msg.from,
+                'menu'
+            );
+
             return;
         }
 
         // ======================================
-        // OPÇÕES
+        // OPÇÃO 1
         // ======================================
 
-        if (texto === '1') {
-            await client.sendMessage(msg.from,
+        if (
+            sessaoAtual === 'menu' &&
+            texto === '1'
+        ) {
+
+            await delay(1000);
+
+            await client.sendMessage(
+                msg.from,
 `🛠️ SUPORTE
 
-Descreva seu problema.`);
-            salvarSessao(msg.from, 'suporte');
+Descreva seu problema.`
+            );
+
+            salvarSessao(
+                msg.from,
+                'suporte'
+            );
+
             return;
         }
 
-        if (texto === '2') {
-            await client.sendMessage(msg.from,
+        // ======================================
+        // OPÇÃO 2
+        // ======================================
+
+        if (
+            sessaoAtual === 'menu' &&
+            texto === '2'
+        ) {
+
+            await delay(1000);
+
+            await client.sendMessage(
+                msg.from,
 `💰 FINANCEIRO
 
-Envie sua dúvida.`);
-            salvarSessao(msg.from, 'financeiro');
+Envie sua dúvida.`
+            );
+
+            salvarSessao(
+                msg.from,
+                'financeiro'
+            );
+
             return;
         }
 
-        if (texto === '3') {
-            await client.sendMessage(msg.from,
+        // ======================================
+        // OPÇÃO 3
+        // ======================================
+
+        if (
+            sessaoAtual === 'menu' &&
+            texto === '3'
+        ) {
+
+            await delay(1000);
+
+            await client.sendMessage(
+                msg.from,
 `🛒 VENDAS
 
-Fale com nosso comercial.`);
-            salvarSessao(msg.from, 'vendas');
+Fale com nosso comercial.`
+            );
+
+            salvarSessao(
+                msg.from,
+                'vendas'
+            );
+
             return;
         }
 
@@ -234,13 +496,34 @@ Fale com nosso comercial.`);
         // FLUXO SUPORTE
         // ======================================
 
-        if (sessaoAtual === 'suporte') {
+        if (
+            sessaoAtual === 'suporte'
+        ) {
+
+            const protocolo =
+                gerarProtocolo();
+
+            salvarChamado(
+                msg.from,
+                msg.body,
+                protocolo
+            );
+
+            await delay(1000);
 
             await client.sendMessage(
                 msg.from,
 `📋 Problema registrado.
 
+🎫 Protocolo: ${protocolo}
+
 Equipe vai analisar e responder.`
+            );
+
+            // ENCERRA SESSÃO
+            salvarSessao(
+                msg.from,
+                null
             );
 
             return;
@@ -250,6 +533,8 @@ Equipe vai analisar e responder.`
         // DEFAULT
         // ======================================
 
+        await delay(1000);
+
         await client.sendMessage(
             msg.from,
 `❌ Comando inválido.
@@ -258,7 +543,11 @@ Digite: menu`
         );
 
     } catch (error) {
-        console.log('❌ ERRO:', error);
+
+        console.log(
+            '❌ ERRO:',
+            error
+        );
     }
 });
 
