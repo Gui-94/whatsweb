@@ -1,0 +1,55 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 30px;
+}
+
+#dashboard {
+    margin-top: 20px;
+}
+
+.card {
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+.aberto {
+    color: green;
+    font-weight: bold;
+}
+
+.fechado {
+    color: red;
+    font-weight: bold;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+nav a {
+    text-decoration: none;
+    margin-left: 15px;
+    font-weight: bold;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+.card {
+    background: #fff;
+}
+
+.aberto {
+    color: green;
+    font-weight: bold;
+}
+
+.fechado {
+    color: red;
+    font-weight: bold;
+}
