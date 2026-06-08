@@ -126,6 +126,12 @@ function lerSessoes() {
 
 function salvarSessao(numero, etapa) {
 
+     console.log('====================');
+    console.log('DEBUG salvarSessao');
+    console.log('numero:', numero);
+    console.log('etapa:', etapa);
+     console.trace();
+
     const sessoes = lerSessoes();
 
     if (etapa === null) {
@@ -136,8 +142,7 @@ function salvarSessao(numero, etapa) {
 
         sessoes[numero] = {
             etapa,
-            atualizadoEm:
-                new Date().toISOString()
+            atualizadoEm: new Date().toISOString()
         };
     }
 
@@ -158,7 +163,6 @@ function obterSessao(numero) {
     return sessoes[numero]?.etapa || null;
 }
 
-// ======================================
 // PROTOCOLO
 // ======================================
 
@@ -522,9 +526,9 @@ Equipe vai analisar e responder.`
 
             // ENCERRA SESSÃO
             salvarSessao(
-                msg.from,
-                null
-            );
+    msg.from,
+    'aguardando_atendente'
+);
 
             return;
         }

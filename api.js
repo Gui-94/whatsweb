@@ -1,6 +1,10 @@
 import express from 'express';
 import fs from 'fs';
 
+import {
+    listarChamados
+} from './services/chamadoService.js';
+
 const app = express();
 
 app.use(express.static('public'));
@@ -22,12 +26,7 @@ app.get('/', (req, res) => {
 
 app.get('/chamados', (req, res) => {
 
-    const chamados = JSON.parse(
-        fs.readFileSync(
-            './database/chamados.json',
-            'utf-8'
-        )
-    );
+    const chamados = listarChamados();
 
     res.json(chamados);
 });
@@ -109,15 +108,20 @@ app.get('/dashboard', (req, res) => {
     res.json({
         clientes: clientes.length,
         chamados: chamados.length,
+
         abertos: chamados.filter(
             c => c.status === 'aberto'
         ).length,
+
+        fechados: chamados.filter(
+            c => c.status === 'fechado'
+        ).length,
+
         sessoesAtivas: Object.keys(
             sessoes
         ).length
     });
 });
-
 // ======================================
 // FECHAR CHAMADO
 // ======================================

@@ -2,29 +2,35 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Help Desk</title>
+    <title>Clientes</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
 
-        <h1>📊 Painel Help Desk</h1>
+        <h1>👥 Clientes</h1>
 
         <nav>
             <a href="/">🏠 Dashboard</a>
             <a href="/chamados.html">📋 Chamados</a>
-            <a href="/clientes.html">👥 Clientes</a>
         </nav>
 
     </header>
 
     <hr>
 
-    <div id="dashboard"></div>
+    <table id="tabela">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+            </tr>
+        </thead>
 
-    <script src="app.js"></script>
+        <tbody></tbody>
+    </table>
+
+    <script src="clientes.js"></script>
 
 </body>
 </html>

@@ -1,33 +1,41 @@
-fetch('/chamados')
-    .then(res => res.json())
-    .then(chamados => {
+async function carregarChamados() {
 
-        const tbody =
-            document.querySelector('tbody');
+    const res = await fetch('/chamados');
+    const chamados = await res.json();
 
-        chamados.forEach(chamado => {
+    const tbody = document.querySelector('tbody');
 
-            tbody.innerHTML += `
-                <tr>
-                    <td>${chamado.protocolo}</td>
-                    <td>${chamado.numero}</td>
-                    <td>${chamado.mensagem}</td>
+    tbody.innerHTML = '';
 
-                    <td>
-                        <span class="${chamado.status}">
-                            ${chamado.status}
-                        </span>
-                    </td>
+    chamados.forEach(chamado => {
 
-                    <td>
-                        ${
-                            chamado.status === 'aberto'
-                                ? `<a href="/chamado/${chamado.protocolo}/fechar">Fechar</a>`
-                                : '✅ Encerrado'
-                        }
-                    </td>
-                </tr>
-            `;
-        });
+        tbody.innerHTML += `
+            <tr>
+                <td>${chamado.protocolo}</td>
+                <td>${chamado.numero}</td>
+                <td>${chamado.mensagem}</td>
 
+                <td>
+                    <span class="${chamado.status}">
+                        ${chamado.status}
+                    </span>
+                </td>
+
+                <td>
+                    ${
+                        chamado.status === 'aberto'
+                        ? `<a href="/chamado/${chamado.protocolo}/fechar">Fechar</a>`
+                        : '✅ Encerrado'
+                    }
+                </td>
+            </tr>
+        `;
     });
+}
+
+carregarChamados();
+
+setInterval(
+    carregarChamados,
+    5000
+);
