@@ -168,11 +168,18 @@ function obterSessao(numero) {
 
 function gerarProtocolo() {
 
+    const agora = new Date();
+
+    const data =
+        agora.getFullYear() +
+        String(agora.getMonth() + 1).padStart(2, '0') +
+        String(agora.getDate()).padStart(2, '0');
+
     const numero = Math.floor(
         1000 + Math.random() * 9000
     );
 
-    return `SUP-${numero}`;
+    return `SUP-${data}-${numero}`;
 }
 
 // ======================================
@@ -206,6 +213,36 @@ function salvarChamado(
     console.log(
         `📁 Chamado salvo: ${protocolo}`
     );
+}
+
+function fecharChamado(numero) {
+
+    const chamados = lerJSON(
+        caminhoChamados,
+        []
+    );
+
+    const chamado = chamados.find(
+        c =>
+            c.numero === numero &&
+            c.status === 'aberto'
+    );
+
+    if (!chamado) {
+        return false;
+    }
+
+    chamado.status = 'fechado';
+
+    chamado.dataFechamento =
+        new Date().toISOString();
+
+    salvarJSON(
+        caminhoChamados,
+        chamados
+    );
+
+    return true;
 }
 
 // ======================================
@@ -311,6 +348,62 @@ client.on('message', async (msg) => {
 
         const sessaoAtual =
             obterSessao(msg.from);
+
+           
+
+// ENCERRAR CHAMADO
+
+if (
+    sessaoAtual === 'aguardando_atendente' &&
+    texto === 'encerrar'
+) {
+
+    const fechado =
+        fecharChamado(msg.from);
+
+    if (fechado) {
+
+        salvarSessao(
+            msg.from,
+            null
+        );
+
+        await client.sendMessage(
+            msg.from,
+`✅ Chamado encerrado.
+
+Obrigado pelo contato!`
+        );
+
+    } else {
+
+        await client.sendMessage(
+            msg.from,
+`❌ Nenhum chamado aberto encontrado.`
+        );
+    }
+
+    return;
+}
+
+// AGUARDANDO ATENDENTE
+
+if (
+    sessaoAtual === 'aguardando_atendente' &&
+    texto !== 'menu'
+) {
+
+    await client.sendMessage(
+        msg.from,
+`⏳ Seu chamado já foi registrado.
+
+Digite *encerrar* para finalizar o chamado.
+
+Ou digite *menu* para voltar ao menu principal.`
+    );
+
+    return;
+}
 
         // ======================================
         // SAIR
