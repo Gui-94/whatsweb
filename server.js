@@ -1,10 +1,22 @@
+import express from 'express';
+import db from './db.js';
 import 'dotenv/config';
 import fs from 'fs';
 import pkg from 'whatsapp-web.js';
+import {
+    setClient
+} from './whatsappClient.js';
 
 process.stdout.write('\x1b[?25h');
 
 const { Client, LocalAuth } = pkg;
+
+const app = express();
+
+app.use(
+    express.static('public')
+);
+const PORT = 3000;
 
 // ======================================
 // CAMINHOS
@@ -215,6 +227,100 @@ function salvarChamado(
     );
 }
 
+function salvarChamadoSQLite(
+    numero,
+    mensagem,
+    protocolo
+) {
+
+    db.run(
+        `
+        INSERT INTO chamados
+        (
+            numero,
+            protocolo,
+            mensagem,
+            status,
+            data
+        )
+        VALUES (?, ?, ?, ?, ?)
+        `,
+        [
+            numero,
+            protocolo,
+            mensagem,
+            'aberto',
+            new Date().toISOString()
+        ],
+        (erro) => {
+
+            if (erro) {
+
+                console.log(
+                    '❌ SQLite:',
+                    erro.message
+                );
+
+            } else {
+
+                console.log(
+                    `💾 SQLite → ${protocolo}`
+                );
+            }
+        }
+    );
+}
+
+function listarChamadosSQLite() {
+
+    db.all(
+        'SELECT * FROM chamados',
+        [],
+        (erro, rows) => {
+
+            if (erro) {
+
+                console.log(
+                    '❌ Erro SQLite:',
+                    erro.message
+                );
+
+                return;
+            }
+
+            console.log(
+                '\n📋 CHAMADOS SQLITE'
+            );
+
+            console.table(rows);
+        }
+    );
+}
+
+function contarChamadosSQLite(callback) {
+
+    db.get(
+        'SELECT COUNT(*) as total FROM chamados',
+        [],
+        (erro, row) => {
+
+            if (erro) {
+
+                console.log(
+                    '❌ SQLite:',
+                    erro.message
+                );
+
+                callback(0);
+
+                return;
+            }
+
+            callback(row.total);
+        }
+    );
+}
+
 function fecharChamado(numero) {
 
     const chamados = lerJSON(
@@ -291,6 +397,7 @@ const client = new Client({
         ]
     }
 });
+setClient(client);
 
 // ======================================
 // EVENTS
@@ -308,6 +415,7 @@ client.on('ready', () => {
     console.log(
         '✅ BOT CONECTADO!'
     );
+
 });
 
 // ======================================
@@ -601,10 +709,16 @@ Fale com nosso comercial.`
                 gerarProtocolo();
 
             salvarChamado(
-                msg.from,
-                msg.body,
-                protocolo
-            );
+    msg.from,
+    msg.body,
+    protocolo
+);
+
+salvarChamadoSQLite(
+    msg.from,
+    msg.body,
+    protocolo
+);
 
             await delay(1000);
 
@@ -651,5 +765,140 @@ Digite: menu`
 // ======================================
 // START
 // ======================================
+
+// ======================================
+// API
+// ======================================
+
+app.get('/', (req, res) => {
+
+    res.send(
+        '🚀 API ONLINE'
+    );
+});
+
+app.get('/chamados', (req, res) => {
+
+    db.all(
+        `
+        SELECT *
+        FROM chamados
+        ORDER BY id DESC
+        `,
+        [],
+        (erro, rows) => {
+
+            if (erro) {
+
+                return res.status(500).json({
+                    erro: erro.message
+                });
+            }
+
+            res.json(rows);
+        }
+    );
+});
+
+app.get('/dashboard', (req, res) => {
+
+    const clientes = JSON.parse(
+        fs.readFileSync(
+            './database/clientes.json',
+            'utf-8'
+        )
+    );
+
+    const sessoes = JSON.parse(
+        fs.readFileSync(
+            './database/sessoes.json',
+            'utf-8'
+        )
+    );
+
+    db.get(
+        `
+        SELECT
+            COUNT(*) as chamados,
+            SUM(CASE WHEN status = 'aberto' THEN 1 ELSE 0 END) as abertos,
+            SUM(CASE WHEN status = 'fechado' THEN 1 ELSE 0 END) as fechados
+        FROM chamados
+        `,
+        [],
+        (erro, row) => {
+
+            if (erro) {
+
+                return res.status(500).json({
+                    erro: erro.message
+                });
+            }
+
+            res.json({
+                clientes: clientes.length,
+                chamados: row.chamados || 0,
+                abertos: row.abertos || 0,
+                fechados: row.fechados || 0,
+                sessoesAtivas:
+                    Object.keys(sessoes).length
+            });
+        }
+    );
+});
+
+app.get('/clientes', (req, res) => {
+
+    const clientes = JSON.parse(
+        fs.readFileSync(
+            './database/clientes.json',
+            'utf-8'
+        )
+    );
+
+    res.json(clientes);
+});
+
+app.get('/sessoes', (req, res) => {
+
+    const sessoes = JSON.parse(
+        fs.readFileSync(
+            './database/sessoes.json',
+            'utf-8'
+        )
+    );
+
+    res.json(sessoes);
+});
+
+app.get(
+    '/responder/:numero/:mensagem',
+    async (req, res) => {
+
+        try {
+
+            await client.sendMessage(
+                req.params.numero,
+                req.params.mensagem
+            );
+
+            res.json({
+                sucesso: true
+            });
+
+        } catch (erro) {
+
+            res.status(500).json({
+                erro: erro.message
+            });
+        }
+    }
+);
+
+app.listen(PORT, () => {
+
+    console.log(
+        `🚀 API rodando em http://localhost:${PORT}`
+    );
+});
 
 client.initialize();

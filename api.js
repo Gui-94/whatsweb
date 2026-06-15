@@ -1,5 +1,10 @@
+import db from './db.js';
 import express from 'express';
 import fs from 'fs';
+
+import {
+    getClient
+} from './whatsappClient.js';
 
 import {
     listarChamados
@@ -26,9 +31,25 @@ app.get('/', (req, res) => {
 
 app.get('/chamados', (req, res) => {
 
-    const chamados = listarChamados();
+    db.all(
+        `
+        SELECT *
+        FROM chamados
+        ORDER BY id DESC
+        `,
+        [],
+        (erro, rows) => {
 
-    res.json(chamados);
+            if (erro) {
+
+                return res.status(500).json({
+                    erro: erro.message
+                });
+            }
+
+            res.json(rows);
+        }
+    );
 });
 
 // ======================================
@@ -37,28 +58,33 @@ app.get('/chamados', (req, res) => {
 
 app.get('/chamado/:protocolo', (req, res) => {
 
-    const chamados = JSON.parse(
-        fs.readFileSync(
-            './database/chamados.json',
-            'utf-8'
-        )
+    db.get(
+        `
+        SELECT *
+        FROM chamados
+        WHERE protocolo = ?
+        `,
+        [req.params.protocolo],
+        (erro, row) => {
+
+            if (erro) {
+
+                return res.status(500).json({
+                    erro: erro.message
+                });
+            }
+
+            if (!row) {
+
+                return res.status(404).json({
+                    erro: 'Chamado não encontrado'
+                });
+            }
+
+            res.json(row);
+        }
     );
-
-    const chamado = chamados.find(
-        item =>
-            item.protocolo === req.params.protocolo
-    );
-
-    if (!chamado) {
-
-        return res.status(404).json({
-            erro: 'Chamado não encontrado'
-        });
-    }
-
-    res.json(chamado);
 });
-
 // ======================================
 // LISTAR CLIENTES
 // ======================================
@@ -97,78 +123,141 @@ app.get('/dashboard', (req, res) => {
         fs.readFileSync('./database/clientes.json', 'utf-8')
     );
 
-    const chamados = JSON.parse(
-        fs.readFileSync('./database/chamados.json', 'utf-8')
-    );
-
     const sessoes = JSON.parse(
         fs.readFileSync('./database/sessoes.json', 'utf-8')
     );
 
-    res.json({
-        clientes: clientes.length,
-        chamados: chamados.length,
+    db.get(
+        `
+        SELECT
+            COUNT(*) as chamados,
+            SUM(CASE WHEN status = 'aberto' THEN 1 ELSE 0 END) as abertos,
+            SUM(CASE WHEN status = 'fechado' THEN 1 ELSE 0 END) as fechados
+        FROM chamados
+        `,
+        [],
+        (erro, row) => {
 
-        abertos: chamados.filter(
-            c => c.status === 'aberto'
-        ).length,
+            if (erro) {
 
-        fechados: chamados.filter(
-            c => c.status === 'fechado'
-        ).length,
+                return res.status(500).json({
+                    erro: erro.message
+                });
+            }
 
-        sessoesAtivas: Object.keys(
-            sessoes
-        ).length
-    });
+            res.json({
+                clientes: clientes.length,
+                chamados: row.chamados || 0,
+                abertos: row.abertos || 0,
+                fechados: row.fechados || 0,
+                sessoesAtivas: Object.keys(
+                    sessoes
+                ).length
+            });
+        }
+    );
 });
+
 // ======================================
 // FECHAR CHAMADO
 // ======================================
 
 app.get('/chamado/:protocolo/fechar', (req, res) => {
 
-    const chamados = JSON.parse(
-        fs.readFileSync(
-            './database/chamados.json',
-            'utf-8'
-        )
+    db.run(
+        `
+        UPDATE chamados
+        SET status = 'fechado'
+        WHERE protocolo = ?
+        `,
+        [req.params.protocolo],
+        function (erro) {
+
+            if (erro) {
+
+                return res.status(500).json({
+                    erro: erro.message
+                });
+            }
+
+            if (this.changes === 0) {
+
+                return res.status(404).json({
+                    erro: 'Chamado não encontrado'
+                });
+            }
+
+            res.json({
+                sucesso: true,
+                protocolo: req.params.protocolo
+            });
+        }
     );
+});
+// ======================================
+// DASHBOARD SQLITE
+// ======================================
 
-    const chamado = chamados.find(
-        item =>
-            item.protocolo === req.params.protocolo
+app.get('/dashboard-sqlite', (req, res) => {
+
+    db.get(
+        `
+        SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'aberto' THEN 1 ELSE 0 END) as abertos,
+            SUM(CASE WHEN status = 'fechado' THEN 1 ELSE 0 END) as fechados
+        FROM chamados
+        `,
+        [],
+        (erro, row) => {
+
+            if (erro) {
+
+                return res.status(500).json({
+                    erro: erro.message
+                });
+            }
+
+            res.json(row);
+        }
     );
-
-    if (!chamado) {
-
-        return res.status(404).json({
-            erro: 'Chamado não encontrado'
-        });
-    }
-
-    chamado.status = 'fechado';
-
-    fs.writeFileSync(
-        './database/chamados.json',
-        JSON.stringify(chamados, null, 2),
-        'utf-8'
-    );
-
-    res.json({
-        mensagem: 'Chamado fechado com sucesso',
-        protocolo: chamado.protocolo,
-        status: chamado.status
-    });
 });
 
 // ======================================
 // START
 // ======================================
 
+
 app.listen(PORT, () => {
 
     console.log(
         `🚀 API rodando em http://localhost:${PORT}`
     );
+});
+
+// ======================================
+// RESPONDER CLIENTE
+// ======================================
+
+app.get('/responder/:numero/:mensagem', async (req, res) => {
+
+    try {
+
+        const client = getClient();
+
+        await client.sendMessage(
+            req.params.numero,
+            req.params.mensagem
+        );
+
+        res.json({
+            sucesso: true
+        });
+
+    } catch (erro) {
+
+        res.status(500).json({
+            erro: erro.message
+        });
+    }
 });
