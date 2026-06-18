@@ -1,0 +1,9 @@
+.aberto {
+    color: green;
+    font-weight: bold;
+}
+
+.fechado {
+    color: red;
+    font-weight: bold;
+}

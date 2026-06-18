@@ -102,6 +102,36 @@ function salvarJSON(caminho, data) {
 // CLIENTES
 // ======================================
 
+function salvarClienteSQLite(numero) {
+
+    db.run(
+        `
+        INSERT OR IGNORE INTO clientes
+        (
+            numero
+        )
+        VALUES (?)
+        `,
+        [numero],
+        (erro) => {
+
+            if (erro) {
+
+                console.log(
+                    '❌ Erro cliente:',
+                    erro.message
+                );
+
+            } else {
+
+                console.log(
+                    `👤 Cliente salvo: ${numero}`
+                );
+            }
+        }
+    );
+}
+
 function salvarCliente(numero) {
 
     const clientes = lerJSON(
@@ -233,6 +263,7 @@ function salvarChamadoSQLite(
     protocolo
 ) {
 
+
     db.run(
         `
         INSERT INTO chamados
@@ -265,6 +296,48 @@ function salvarChamadoSQLite(
 
                 console.log(
                     `💾 SQLite → ${protocolo}`
+                );
+            }
+        }
+    );
+}
+
+function salvarMensagemSQLite(
+    numero,
+    autor,
+    mensagem
+) {
+
+    db.run(
+        `
+        INSERT INTO mensagens
+        (
+            numero,
+            autor,
+            mensagem,
+            data
+        )
+        VALUES (?, ?, ?, ?)
+        `,
+        [
+            numero,
+            autor,
+            mensagem,
+            new Date().toISOString()
+        ],
+        (erro) => {
+
+            if (erro) {
+
+                console.log(
+                    '❌ Erro mensagem:',
+                    erro.message
+                );
+
+            } else {
+
+                console.log(
+                    `💬 Mensagem salva`
                 );
             }
         }
@@ -453,6 +526,7 @@ client.on('message', async (msg) => {
                 .trim();
 
         salvarCliente(msg.from);
+        salvarClienteSQLite(msg.from);
 
         const sessaoAtual =
             obterSessao(msg.from);
@@ -720,6 +794,11 @@ salvarChamadoSQLite(
     protocolo
 );
 
+salvarMensagemSQLite(
+    msg.from,
+    'cliente',
+    msg.body
+);
             await delay(1000);
 
             await client.sendMessage(
@@ -848,14 +927,24 @@ app.get('/dashboard', (req, res) => {
 
 app.get('/clientes', (req, res) => {
 
-    const clientes = JSON.parse(
-        fs.readFileSync(
-            './database/clientes.json',
-            'utf-8'
-        )
-    );
+    db.all(
+        `
+        SELECT *
+        FROM clientes
+        ORDER BY id DESC
+        `,
+        [],
+        (erro, rows) => {
 
-    res.json(clientes);
+            if (erro) {
+                return res.status(500).json({
+                    erro: erro.message
+                });
+            }
+
+            res.json(rows);
+        }
+    );
 });
 
 app.get('/sessoes', (req, res) => {
@@ -876,9 +965,21 @@ app.get(
 
         try {
 
+            const numero =
+                req.params.numero;
+
+            const mensagem =
+                req.params.mensagem;
+
             await client.sendMessage(
-                req.params.numero,
-                req.params.mensagem
+                numero,
+                mensagem
+            );
+
+            salvarMensagemSQLite(
+                numero,
+                'atendente',
+                mensagem
             );
 
             res.json({
@@ -891,6 +992,36 @@ app.get(
                 erro: erro.message
             });
         }
+    }
+);
+
+app.get(
+    '/mensagens/:numero',
+    (req, res) => {
+
+        db.all(
+            `
+            SELECT *
+            FROM mensagens
+            WHERE numero = ?
+            ORDER BY id ASC
+            `,
+            [req.params.numero],
+            (erro, rows) => {
+
+                if (erro) {
+
+                    return res
+                        .status(500)
+                        .json({
+                            erro:
+                                erro.message
+                        });
+                }
+
+                res.json(rows);
+            }
+        );
     }
 );
 

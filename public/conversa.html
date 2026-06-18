@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>💬 Atendimento</title>
+
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/conversa.css">
+</head>
+<body>
+
+    <header>
+        <h1>💬 Atendimento</h1>
+
+        <nav>
+            <a href="/clientes.html">
+                👥 Clientes
+            </a>
+
+            <a href="/chamados.html">
+                📋 Chamados
+            </a>
+
+            <a href="/">
+                🏠 Dashboard
+            </a>
+        </nav>
+    </header>
+
+    <hr>
+
+    <h2 id="cliente"></h2>
+
+    <div id="mensagens"></div>
+
+    <div id="enviar">
+        <input
+            type="text"
+            id="texto"
+            placeholder="Digite uma mensagem..."
+        >
+
+        <button onclick="enviarMensagem()">
+            Enviar
+        </button>
+    </div>
+
+    <script src="/js/conversa.js"></script>
+
+</body>
+</html>

@@ -41,6 +41,22 @@ db.serialize(() => {
     `);
 
     db.run(`
+    CREATE TABLE IF NOT EXISTS mensagens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        numero TEXT,
+        autor TEXT,
+        mensagem TEXT,
+        data TEXT
+    )
+`, (erro) => {
+
+    if (erro) {
+        console.log('❌ Erro criando mensagens:', erro.message);
+    } else {
+        console.log('✅ Tabela mensagens pronta');
+    }
+});
+    db.run(`
         CREATE TABLE IF NOT EXISTS sessoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             numero TEXT UNIQUE,

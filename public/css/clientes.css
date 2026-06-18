@@ -1,0 +1,16 @@
+#tabela {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#tabela th,
+#tabela td {
+    border: 1px solid #ccc;
+    padding: 12px;
+    text-align: left;
+}
+
+#tabela th {
+    background: #f4f4f4;
+}
