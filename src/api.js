@@ -10,7 +10,12 @@ import {
     listarChamados
 } from './services/chamadoService.js';
 
+import http from 'http';
+import { Server } from 'socket.io';
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
 app.use(express.static('public'));
 
@@ -228,7 +233,7 @@ app.get('/dashboard-sqlite', (req, res) => {
 // ======================================
 
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
 
     console.log(
         `🚀 API rodando em http://localhost:${PORT}`

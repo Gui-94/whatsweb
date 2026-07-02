@@ -1,6 +1,9 @@
-fetch('/dashboard')
-    .then(res => res.json())
-    .then(data => {
+const socket = io();
+
+async function carregarDashboard() {
+    try {
+        const res = await fetch('/dashboard');
+        const data = await res.json();
 
         document.getElementById('dashboard').innerHTML = `
             <div class="card">
@@ -28,7 +31,27 @@ fetch('/dashboard')
                 <p>${data.sessoesAtivas}</p>
             </div>
         `;
+    } catch (err) {
+        console.error('Erro ao carregar dashboard:', err);
+    }
+}
+
+// Carrega ao abrir a página
+carregarDashboard();
+
+// Escuta eventos do servidor
+socket.on('atualizarDashboard', () => {
+    carregarDashboard();
+});
+
+fetch('/dashboard')
+    .then(res => {
+        console.log('STATUS:', res.status);
+        return res.json();
+    })
+    .then(data => {
+        console.log('DADOS:', data);
     })
     .catch(err => {
-        console.error('Erro ao carregar dashboard:', err);
+        console.error('ERRO FETCH:', err);
     });
